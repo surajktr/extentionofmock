@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "Savemock Bulk",
+  "version": "1.1",
+  "description": "Saves questions from any mock exam site to a built-in dashboard, organised by subject.",
+  "icons": {
+    "128": "icon.png"
+  },
+  "permissions": [
+    "clipboardWrite",
+    "storage",
+    "tabs",
+    "alarms",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "*://*.oliveboard.in/*",
+    "*://*.ssccglpinnacle.com/*",
+    "*://*.testbook.com/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.oliveboard.in/*",
+        "*://*.ssccglpinnacle.com/*",
+        "*://*.testbook.com/*",
+        "*://*.testranking.com/*",
+        "*://*.englishmadhyam.in/*"
+      ],
+      "js": [
+        "parser.js",
+        "content.js"
+      ]
+    }
+  ],
+  "action": {
+    "default_title": "Open SSC Bookmark Dashboard",
+    "default_icon": "icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "dashboard.html",
+        "dashboard.js",
+        "test.html",
+        "test.js",
+        "parser.js",
+        "lib/katex/*",
+        "lib/katex/fonts/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

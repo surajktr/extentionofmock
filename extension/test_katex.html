@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KaTeX Test</title>
+    <link rel="stylesheet" href="lib/katex/katex.min.css">
+    <script src="lib/katex/katex.min.js"></script>
+    <script src="lib/katex/auto-render.min.js"></script>
+</head>
+<body>
+    <h2>KaTeX Local Test</h2>
+    
+    <p>Test 1 - Direct render:</p>
+    <span id="test1" class="math-tex">\frac{1}{2}</span>
+    
+    <p>Test 2 - Direct render:</p>
+    <span id="test2" class="math-tex">\sqrt{x^{3}+y^{3}+z^{3}-26}</span>
+    
+    <p>Test 3 - Direct render:</p>
+    <span id="test3" class="math-tex">0.5\overline{7} + 0.6\overline{23}</span>
+    
+    <p>Test 4 - Auto-render with $ delimiters:</p>
+    <p>The value of $\frac{1}{2}:\frac{1}{3}:\frac{1}{4}$ is</p>
+
+    <div id="status"></div>
+
+    <script>
+        const status = document.getElementById('status');
+        
+        if (window.katex) {
+            status.innerHTML = '<b style="color:green">✅ KaTeX LOADED</b>';
+            
+            document.querySelectorAll('.math-tex').forEach(span => {
+                const tex = span.textContent.trim();
+                try {
+                    katex.render(tex, span, { throwOnError: false });
+                    console.log('Rendered:', tex);
+                } catch(e) {
+                    console.error('Failed:', tex, e);
+                }
+            });
+            
+            if (typeof renderMathInElement === 'function') {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: '$', right: '$', display: false}
+                    ]
+                });
+            }
+        } else {
+            status.innerHTML = '<b style="color:red">❌ KaTeX NOT LOADED</b>';
+        }
+    </script>
+</body>
+</html>

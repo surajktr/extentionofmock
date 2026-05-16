@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Sqrt Export</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* This is what the export currently has */
+        .katex, .math-tex, mjx-container {
+            font-size: 14.5px !important;
+            vertical-align: middle;
+            padding: 3px 0;
+            display: inline-block;
+            font-weight: normal !important;
+            line-height: normal !important;
+        }
+        .katex, .katex * {
+            box-sizing: content-box !important;
+        }
+    </style>
+    <script>
+      function renderMath() {
+        if (!window.katex || typeof renderMathInElement === 'undefined') { setTimeout(renderMath, 200); return; }
+        document.querySelectorAll('.math-tex').forEach(function(span) {
+            if (span.querySelector('.katex')) return;
+            var tex = span.textContent.trim();
+            if (!tex) return;
+            console.log('Before strip:', JSON.stringify(tex));
+            if (tex.startsWith('$$') && tex.endsWith('$$')) tex = tex.slice(2, -2);
+            else if (tex.startsWith('$') && tex.endsWith('$')) tex = tex.slice(1, -1);
+            else if (tex.length > 4 && tex.charAt(0) === '\\' && tex.charAt(1) === '(' && tex.endsWith('\\)')) tex = tex.slice(2, -2);
+            console.log('After strip:', JSON.stringify(tex));
+            if (!tex) return;
+            try { katex.render(tex, span, {throwOnError: false, displayMode: false}); } catch(e) { console.error('Render error:', e); }
+        });
+        renderMathInElement(document.body, { throwOnError: false, delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\[', right: '\\]', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}] });
+      }
+      window.onload = renderMath;
+    </script>
+</head>
+<body class="p-8 bg-gray-100">
+    <h2 class="text-xl font-bold mb-4">Test: Sqrt in Export</h2>
+    
+    <div class="mb-4 p-4 bg-white rounded shadow">
+        <h3 class="font-bold mb-2">Test 1: .math-tex span with \(\sqrt{}\)</h3>
+        <span class="math-tex">\(\sqrt{\frac{a^2+b^2}{4-a^2-b^2}}\)</span>
+    </div>
+
+    <div class="mb-4 p-4 bg-white rounded shadow">
+        <h3 class="font-bold mb-2">Test 2: Bare inline math</h3>
+        \(\sqrt{\frac{a^2+b^2}{4-a^2-b^2}}\)
+    </div>
+
+    <div class="mb-4 p-4 bg-white rounded shadow">
+        <h3 class="font-bold mb-2">Test 3: Just frac (no sqrt)</h3>
+        <span class="math-tex">\(\frac{a^2+b^2}{4-a^2-b^2}\)</span>
+    </div>
+
+    <div class="mb-4 p-4 bg-white rounded shadow">
+        <h3 class="font-bold mb-2">Test 4: Dollar sign delimited</h3>
+        $\sqrt{\frac{a^2+b^2}{4-a^2-b^2}}$
+    </div>
+</body>
+</html>

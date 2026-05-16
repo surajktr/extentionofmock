@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Test</title>
+    <!-- KaTeX / Math Rendering -->
+    <link rel="stylesheet" href="lib/katex/katex.min.css">
+    <script defer src="lib/katex/katex.min.js"></script>
+    <script defer src="lib/katex/auto-render.min.js"></script>
+    <script defer src="parser.js"></script>
+    
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-main: #141414;
+            --bg-panel: #141414;
+            --bg-header: #1A1A1A;
+            --bg-sidebar: #0B2B38;
+            --bg-sidebar-header: #0E3545;
+            --border-color: #374151;
+            --text-primary: #F3F4F6;
+            --text-secondary: #D1D5DB;
+            --text-muted: #9CA3AF;
+            --btn-gray: #2D3339;
+            --btn-gray-hover: #3d454d;
+            --btn-cyan: #08A8C6;
+            --btn-cyan-text: #fff;
+            --btn-cyan-hover: #0792ad;
+            --palette-bg: #0B2B38;
+            --sol-panel: #0e3545;
+            --sol-panel-border: #1e5a72;
+            --opt-hover: #1A1A1A;
+            --opt-border: transparent;
+            --opt-correct-bg: #15803d;
+            --opt-wrong-bg: #991b1b;
+        }
+
+        body.light-mode {
+            --bg-main: #ffffff;
+            --bg-panel: #ffffff;
+            --bg-header: #ffffff;
+            --bg-sidebar: #DCEEF9;
+            --bg-sidebar-header: #CBE2F4;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --btn-gray: #e2e8f0;
+            --btn-gray-hover: #cbd5e1;
+            --btn-cyan: #90CAF9;
+            --btn-cyan-text: #1e293b;
+            --btn-cyan-hover: #64B5F6;
+            --palette-bg: #EAF3F9;
+            --sol-panel: #f8fafc;
+            --sol-panel-border: #e2e8f0;
+            --opt-hover: #f8fafc;
+            --opt-border: #e2e8f0;
+            --opt-correct-bg: #dcfce7;
+            --opt-wrong-bg: #fee2e2;
+        }
+
+        /* ── Theme Toggle ── */
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ── Shape classes ── */
+        .shape-square  { border-radius: 4px; }
+        .shape-shield  { clip-path: polygon(0 0,100% 0,100% 75%,50% 100%,0 75%); border-radius: 2px 2px 0 0; }
+        .shape-circle  { border-radius: 50%; }
+
+        /* ── Status colours ── */
+        .bg-not-visited  { background-color:#EFEFEF; color:#000; border:1px solid #ccc; }
+        .bg-not-answered { background-color:#D33636; color:#fff; }
+        .bg-answered     { background-color:#1DA045; color:#fff; }
+        .bg-marked       { background-color:#7138A7; color:#fff; }
+
+        /* ── Custom radio ── */
+        .custom-radio input[type="radio"] { display:none; }
+        .custom-radio .radio-mark {
+            width:20px; height:20px; border:2px solid #6b7280; border-radius:50%;
+            display:inline-flex; align-items:center; justify-content:center;
+            margin-right:12px; transition:all .2s; flex-shrink:0;
+        }
+        .custom-radio input[type="radio"]:checked + .radio-mark { border-color:var(--text-primary); }
+        .custom-radio input[type="radio"]:checked + .radio-mark::after {
+            content:''; width:10px; height:10px; background:var(--text-primary); border-radius:50%;
+        }
+
+        /* ── Answer reveal ── */
+        .opt-correct .radio-mark { border-color:#1DA045!important; background-color:#1DA045; }
+        .opt-correct .radio-mark::after { content:''; width:10px; height:10px; background:#fff; border-radius:50%; }
+        .opt-correct .opt-text { color:#15803d!important; font-weight: 600; }
+        body:not(.light-mode) .opt-correct .opt-text { color:#4ade80!important; }
+
+        .opt-wrong .radio-mark { border-color:#D33636!important; background-color:#D33636; }
+        .opt-wrong .radio-mark::after { content:''; width:10px; height:10px; background:#fff; border-radius:50%; }
+        .opt-wrong .opt-text { color:#b91c1c!important; font-weight: 600; }
+        body:not(.light-mode) .opt-wrong .opt-text { color:#f87171!important; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background:#9CA3AF; border-radius:10px; }
+
+        /* ── Body / layout ── */
+        body {
+            font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+            background:var(--bg-main); color:var(--text-primary); user-select:none;
+            height:100vh; display:flex; flex-direction:column; overflow:hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ── Headers ── */
+        header {
+            background:var(--bg-header); border-bottom:1px solid var(--border-color); height:56px;
+            display:flex; align-items:center; justify-content:space-between;
+            padding:0 24px; flex-shrink:0;
+        }
+        .header-left  { color:var(--text-primary); font-size:18px; letter-spacing:.025em; font-weight: 600; }
+        .header-right { display:flex; align-items:center; gap:24px; }
+        .timer-block  { display:flex; align-items:center; color:var(--text-secondary); gap:4px; }
+        .timer-label  { font-weight:600; margin-right:8px; font-size: 14px; }
+        .timer-digit  { background:var(--border-color); padding:4px 8px; border-radius:4px; font-family:monospace; color:var(--text-primary); }
+
+        .icon-btn {
+            background:none; border:none; cursor:pointer; padding:4px;
+            color:var(--text-muted); border-radius:4px; transition:color .2s;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .icon-btn:hover { color:var(--text-primary); }
+        .icon-btn svg { width:24px; height:24px; }
+
+        .icon-btn-cyan { border:1px solid var(--btn-cyan); color:var(--btn-cyan); padding:6px; }
+
+        /* Light mode specific test header overrides to match cyan color */
+        body.light-mode header { background: #08A8C6; border-bottom-color: #08A8C6; }
+        body.light-mode .header-left,
+        body.light-mode .timer-block,
+        body.light-mode .timer-label { color: #ffffff; }
+        body.light-mode .timer-digit { background: rgba(255,255,255,0.2); color: #ffffff; }
+        body.light-mode .theme-toggle { color: #ffffff; border-color: rgba(255,255,255,0.4); }
+        body.light-mode .icon-btn { color: #ffffff; }
+        body.light-mode .icon-btn-cyan { color: #ffffff; border-color: rgba(255,255,255,0.4); }
+        body.light-mode .btn-gray { color: #ffffff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); }
+        body.light-mode .bg-not-visited { background-color: #ffffff; border-color: #cbd5e1; }
+
+        /* ── Workspace ── */
+        .workspace { display:flex; flex:1; overflow:hidden; position:relative; }
+        .left-panel { flex:1; display:flex; flex-direction:column; min-width:0; background:var(--bg-panel); }
+
+        .sections-bar {
+            display:flex; align-items:center; height:48px;
+            border-bottom:1px solid var(--border-color); padding:0 24px; flex-shrink:0;
+        }
+        .section-tab { background:#0B4A5C; color:#fff; padding:6px 16px; border-radius:4px; font-size:13px; border:none; }
+        .mode-badge { margin-left:16px; padding:2px 8px; font-size:11px; font-weight:700; border-radius:4px; text-transform:uppercase; }
+        .mode-real { background:#dc2626; color:#fff; }
+        .mode-practice { background:#16a34a; color:#fff; }
+
+        .q-info-bar {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:12px 24px; border-bottom:1px solid var(--border-color); flex-shrink:0;
+        }
+        .q-number { font-size:20px; font-weight:700; }
+        .q-meta { display:flex; align-items:center; gap:16px; font-size:13px; }
+        
+        .zoom-controls { display: flex; gap: 4px; margin-right: 8px; }
+        .btn-zoom { background: var(--border-color); color: var(--text-primary); border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        .marks-pills { display:flex; gap:4px; }
+        .pill-green { background:#15803d; color:#fff; padding:2px 8px; border-radius:999px; font-size:11px; }
+        .pill-red { background:#991b1b; color:#fff; padding:2px 8px; border-radius:999px; font-size:11px; }
+
+        /* ── Content Zoom Classes ── */
+        .zoom-1 { font-size: 15px; }
+        .zoom-2 { font-size: 18px; }
+        .zoom-3 { font-size: 22px; }
+        .zoom-4 { font-size: 26px; }
+
+        .q-content { flex:1; overflow-y:auto; padding:24px; }
+        .q-text { margin-bottom:24px; line-height:1.6; }
+        .options-list { display:flex; flex-direction:column; gap:12px; }
+
+        .custom-radio {
+            display:flex; align-items:flex-start; cursor:pointer;
+            padding:12px; border-radius:6px; transition:background .15s;
+            border: 1px solid var(--opt-border);
+        }
+        .custom-radio:hover { background:var(--opt-hover); }
+        .opt-text { color:var(--text-primary); line-height:1.5; padding-top: 2px; }
+
+        .solution-panel {
+            display:none; margin-top:24px; padding:16px 20px;
+            background:transparent; border:1px solid var(--btn-cyan); border-radius:8px; line-height:1.7;
+        }
+        .notes-panel {
+            display:none; margin-top:12px; padding:16px 20px;
+            background:rgba(113,56,167,.12); border-left:4px solid #7138A7; border-radius:8px; line-height:1.7;
+        }
+
+        /* Ensure passage and solution text scales with zoom */
+        .tb-passage, .ob-passage, .q-text, .opt-text, .solution-panel, .notes-panel,
+        .tb-passage *, .ob-passage *, .q-text *, .opt-text *, .solution-panel *, .notes-panel * {
+            font-size: inherit !important;
+        }
+
+        .left-footer {
+            height:64px; border-top:1px solid var(--border-color); background:var(--bg-main);
+            padding:0 24px; display:flex; align-items:center; flex-shrink:0;
+        }
+        .footer-left-btns { display:flex; gap:12px; }
+        .btn-gray { background:var(--btn-gray); color:var(--text-primary); padding:8px 16px; border-radius:4px; font-size:13px; border:none; cursor:pointer; }
+        .btn-gray:hover { background:var(--btn-gray-hover); }
+        .btn-cyan { background:var(--btn-cyan); color:var(--btn-cyan-text); padding:8px 24px; border-radius:4px; font-weight:600; border:none; cursor:pointer; }
+        .btn-cyan:hover { background:var(--btn-cyan-hover); }
+
+        #sidebarToggleWrapper { position:absolute; right:340px; top:0; height:100%; display:flex; align-items:center; z-index:10; transition:right .3s; }
+        #toggleIconBtn { background:var(--btn-gray); border:none; border-radius:6px 0 0 6px; width:24px; height:64px; cursor:pointer; color:var(--text-primary); }
+        
+        #sidebar { width:340px; background:var(--bg-sidebar); display:flex; flex-direction:column; border-left:1px solid var(--border-color); }
+        .sidebar-profile { padding:16px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border-color); }
+        .avatar { width:48px; height:48px; background:var(--border-color); border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        .sidebar-legend { padding:12px 16px; border-bottom:1px solid var(--border-color); font-size:11px; }
+        
+        .sidebar-section-bar { padding:8px 16px; background:var(--bg-sidebar-header); border-bottom:1px solid var(--border-color); font-size:13px; font-weight:600; }
+        
+        .palette-scroll { flex:1; overflow-y:auto; padding:16px; background:var(--bg-sidebar); }
+        .palette-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+        .palette-btn { width:44px; height:40px; border:1px solid var(--border-color); font-weight:700; cursor:pointer; position:relative; border-radius:4px; display:flex; align-items:center; justify-content:center; }
+        .palette-btn.active-blue-border { box-shadow: 0 0 0 3px var(--bg-sidebar), 0 0 0 6px #0055ff; border-color: #0055ff; z-index: 2; }
+        .palette-check-badge { position:absolute; bottom:-4px; right:-4px; width:14px; height:14px; background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid var(--bg-sidebar); z-index:1; }
+        .palette-check-badge svg { width:8px; height:8px; }
+        
+        .sidebar-footer { padding:16px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:12px; }
+        .btn-submit-test { width:100%; background:var(--btn-cyan); color:var(--btn-cyan-text); padding:10px; border-radius:4px; font-weight:600; border:none; cursor:pointer; }
+        
+        /* Modals */
+        #pauseOverlay, #rangeModal { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:10000; display:flex; align-items:center; justify-content:center; }
+        #pauseOverlay { flex-direction:column; gap:20px; display:none; }
+        .range-card { background:var(--bg-panel); border:1px solid var(--border-color); padding:32px; width:360px; border-radius:12px; }
+        .range-card h2 { margin-bottom: 8px; }
+        .range-field input { background:var(--bg-main); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; width:100%; margin-top:4px; }
+        .btn-start-test { background:var(--btn-cyan); color:var(--btn-cyan-text); padding:12px; border-radius:6px; font-weight:700; border:none; cursor:pointer; width:100%; margin-top:16px; }
+
+        /* ── Solution View overrides ── */
+        #solution-view { display: none; }
+        .sol-opt-row { display: flex; align-items: center; padding: 12px; margin-bottom: 8px; border-radius: 4px; border: 1px solid var(--opt-border); background: var(--bg-panel); }
+        .sol-opt-row.correct { background: var(--opt-correct-bg); border-color: #166534; }
+        .sol-opt-row.correct .sol-opt-text { color: #15803d; font-weight: bold; }
+        body:not(.light-mode) .sol-opt-row.correct .sol-opt-text { color: #4ade80; }
+        
+        .sol-opt-row.wrong { background: var(--opt-wrong-bg); border-color: #7f1d1d; }
+        .sol-opt-row.wrong .sol-opt-text { color: #b91c1c; font-weight: bold; }
+        body:not(.light-mode) .sol-opt-row.wrong .sol-opt-text { color: #f87171; }
+        
+        .sol-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
+        .stat-dot { width:16px; height:16px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; margin-right:6px; }
+        .stat-dot.correct { background:#28a745; }
+        .stat-dot.wrong { background:#dc3545; }
+        .stat-dot.unattempted { background:transparent; border:1px solid var(--text-muted); color:var(--text-primary); }
+
+        /* ── Tabs ── */
+        .sol-tab { background:transparent; border:none; padding:10px 20px; color:var(--text-muted); cursor:pointer; font-weight:600; border-bottom:2px solid transparent; font-size:14px; transition:all .2s; }
+        .sol-tab:hover { color:var(--text-primary); }
+        .sol-tab.active { color:var(--btn-cyan); border-bottom-color:var(--btn-cyan); }
+        .sol-tab.notes-tab.active { color:#a78bfa; border-bottom-color:#a78bfa; }
+
+        /* ── Images & Lightbox ── */
+        .q-content img, .notes-panel img, .solution-panel img { max-width: 100%; height: auto; cursor: zoom-in; display: block; margin: 12px 0; border-radius: 8px; border: 1px solid var(--border-color); }
+        #image-lightbox { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); z-index: 99999; display: none; align-items: center; justify-content: center; cursor: zoom-out; opacity: 0; transition: opacity 0.3s ease; }
+        #image-lightbox.show { display: flex; opacity: 1; }
+        #image-lightbox img { border-radius: 8px; box-shadow: 0 0 60px rgba(0,0,0,0.7); cursor: zoom-in; max-width: 90vw; max-height: 90vh; margin: 0; border: none; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        #image-lightbox.show img { transform: scale(1); }
+        #image-lightbox .close-btn { position: absolute; top: 20px; right: 20px; color: white; font-size: 32px; cursor: pointer; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        #image-lightbox .close-btn:hover { background: rgba(255,255,255,0.3); }
+
+        #sidebar { transition: width 0.3s; overflow: hidden; white-space: nowrap; }
+
+        /* Render math image fixes */
+        .math-tex { display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <!-- Range Picker -->
+    <div id="rangeModal">
+        <div class="range-card">
+            <h2>📋 Select Question Range</h2>
+            <p id="rangeDesc" style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Choose questions.</p>
+            <div style="display:flex;gap:12px;">
+                <div class="range-field"><label>From</label><input type="number" id="rangeFrom" min="1" value="1"></div>
+                <div class="range-field"><label>To</label><input type="number" id="rangeTo" min="1" value="1"></div>
+            </div>
+            <div style="margin-top:12px;">
+                <div class="range-field"><label>Time Limit (Minutes)</label><input type="number" id="testTimer" min="1" value="1"></div>
+            </div>
+            <div style="margin-top:12px;">
+                <div class="range-field">
+                    <label>Test Mode</label>
+                    <select id="testMode" style="background:var(--bg-main); border:1px solid var(--border-color); color:var(--text-primary); padding:10px; width:100%; margin-top:4px; border-radius:4px;">
+                        <option value="real">Real Test (Timed, solutions at end)</option>
+                        <option value="practice">Review Mode (Instant solutions)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="rangeError" style="color:#ef4444;font-size:12px;margin-top:8px;"></div>
+            <button class="btn-start-test" id="btn-start-test">Start Test</button>
+        </div>
+    </div>
+
+    <!-- Pause -->
+    <div id="pauseOverlay">
+        <h2 style="color:#fff">Test Paused</h2>
+        <button class="btn-cyan" id="btn-resume-test">Resume Test</button>
+    </div>
+
+    <!-- MAIN LIVE TEST VIEW -->
+    <div id="live-test-view" style="display:flex; flex-direction:column; height:100%;">
+        <header>
+            <div class="header-left" id="headerTitle">Live Test</div>
+            <div class="header-right">
+                <button class="theme-toggle" id="btn-theme-toggle">🌓 Theme</button>
+                <div class="timer-block">
+                    <span class="timer-label">Time Left</span>
+                    <div class="timer-digit" id="timer-hours">00</div>:
+                    <div class="timer-digit" id="timer-minutes">00</div>:
+                    <div class="timer-digit" id="timer-seconds">00</div>
+                </div>
+                <button class="icon-btn" id="btn-pause-header" title="Pause"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                <button class="icon-btn icon-btn-cyan" id="btn-fullscreen-header" title="Fullscreen"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></button>
+                <button class="btn-gray" onclick="window.location.href='dashboard.html'" style="padding:6px 12px; margin-left:8px;">Home</button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <div class="left-panel">
+                <div class="sections-bar">
+                    <span style="font-size:12px;font-weight:600;margin-right:16px;">SECTIONS</span>
+                    <button class="section-tab" id="sectionName">Subject</button>
+                    <span class="mode-badge" id="modeBadge">Mode</span>
+                </div>
+                
+                <div class="q-info-bar">
+                    <h2 class="q-number" id="questionNumberHeader">Question No. 1</h2>
+                    <div class="q-meta">
+                        <div class="zoom-controls">
+                            <span style="font-size:11px;color:var(--text-muted);margin-right:4px;">ZOOM</span>
+                            <button class="btn-zoom" id="btn-zoom-out">-</button>
+                            <button class="btn-zoom" id="btn-zoom-in">+</button>
+                        </div>
+                        <div class="marks-pills">
+                            <span class="pill-green">+1</span>
+                            <span class="pill-red">-0.25</span>
+                        </div>
+                        <div style="font-family:monospace" id="questionTime">00:00</div>
+                    </div>
+                </div>
+
+                <div class="q-content zoom-1" id="contentArea">
+                    <div class="q-text" id="questionText"></div>
+                    <div class="options-list" id="optionsContainer"></div>
+                    <div class="solution-panel" id="solutionPanel"><span style="color:#08A8C6;font-weight:bold">Solution</span><div id="solutionContent" style="margin-top:8px;"></div></div>
+                    <div class="notes-panel" id="notesPanel"><span style="color:#a78bfa;font-weight:bold">📌 Mistake Notes</span><div id="notesContent" style="margin-top:8px;"></div></div>
+                </div>
+
+                <div class="left-footer" style="justify-content:space-between;">
+                    <div class="footer-left-btns">
+                        <button class="btn-gray" id="btn-prev-live">Previous</button>
+                        <button class="btn-gray" id="btn-mark-review">Mark for Review &amp; Next</button>
+                        <button class="btn-gray" id="btn-clear-response">Clear Response</button>
+                    </div>
+                    <button class="btn-cyan" id="btn-save-next">Save &amp; Next</button>
+                </div>
+            </div>
+
+            <div id="sidebarToggleWrapper"><button id="toggleIconBtn"><svg id="toggleIcon" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" fill="none"/></svg></button></div>
+
+            <div id="sidebar">
+                <div class="sidebar-profile">
+                    <div class="avatar">👤</div>
+                    <div style="font-weight:600;">Candidate</div>
+                </div>
+                <div class="sidebar-section-bar">SECTION : <span id="sidebarSection">Subject</span></div>
+                <div class="palette-scroll">
+                    <div class="palette-grid" id="paletteContainer"></div>
+                </div>
+                <div class="sidebar-footer">
+                    <button class="btn-submit-test" id="btn-submit">Submit Test</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOLUTIONS VIEW -->
+    <div id="solution-view" style="flex-direction:column; height:100%;">
+        <header>
+            <div class="header-left">Solutions & Analysis</div>
+            <div class="header-right">
+                <button class="icon-btn" id="btn-fullscreen-sol" title="Fullscreen"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></button>
+                <button class="theme-toggle" id="btn-theme-toggle-sol">🌓 Theme</button>
+                <button class="btn-gray" onclick="window.location.href='dashboard.html'" style="padding:6px 12px;">Home</button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <div class="left-panel">
+                <div class="q-info-bar">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <h2 class="q-number" id="sol-q-header">Question No. 1</h2>
+                        <span id="sol-q-status" style="padding:2px 8px;border-radius:12px;font-size:12px;color:#fff;">Status</span>
+                        <span id="sol-q-time" style="font-size:13px;color:var(--text-muted);font-weight:600;">⏱️ 00:00</span>
+                    </div>
+                    <div class="q-meta">
+                        <div class="zoom-controls">
+                            <button class="btn-zoom" id="btn-sol-zoom-out">-</button>
+                            <button class="btn-zoom" id="btn-sol-zoom-in">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="q-content zoom-1" id="sol-content-area">
+                    <div class="q-text" id="sol-question-text"></div>
+                    <div class="options-list" id="sol-options-container"></div>
+                    <div id="sol-tabs" style="display:none; margin-top:24px; border-bottom: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <button id="btn-tab-sol" class="sol-tab active">Solution</button>
+                        <button id="btn-tab-notes" class="sol-tab notes-tab">📌 Mistake Notes</button>
+                    </div>
+
+                    <div class="solution-panel" style="display:none; margin-top:0;" id="sol-solution-box">
+                        <div id="sol-solution-content"></div>
+                    </div>
+                    <div class="notes-panel" style="display:none; margin-top:0;" id="sol-notes-panel">
+                        <div id="sol-notes-content"></div>
+                    </div>
+                </div>
+
+                <div class="left-footer" style="justify-content:space-between;">
+                    <button class="btn-gray" id="btn-sol-prev">← Previous</button>
+                    <button class="btn-cyan" id="btn-sol-next">Next →</button>
+                </div>
+            </div>
+
+            <div id="solSidebarToggleWrapper" style="position:absolute; right:340px; top:0; height:100%; display:flex; align-items:center; z-index:10; transition:right .3s;">
+                <button id="solToggleIconBtn" style="background:var(--btn-gray); border:none; border-radius:6px 0 0 6px; width:24px; height:64px; cursor:pointer; color:var(--text-primary);">
+                    <svg id="solToggleIcon" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                </button>
+            </div>
+
+            <div id="sidebar">
+                <div class="sidebar-profile">
+                    <div class="avatar">👤</div>
+                    <div style="font-weight:600;">Summary Report</div>
+                </div>
+                <div class="sidebar-legend">
+                    <div class="sol-stats-grid">
+                        <div style="display:flex;align-items:center;"><div class="stat-dot correct" id="stat-correct">0</div> Correct</div>
+                        <div style="display:flex;align-items:center;"><div class="stat-dot wrong" id="stat-wrong">0</div> Incorrect</div>
+                        <div style="display:flex;align-items:center;grid-column:1/-1;"><div class="stat-dot unattempted" id="stat-skipped">0</div> Unattempted</div>
+                    </div>
+                </div>
+                <div class="sidebar-section-bar">SECTION : <span id="sol-sidebarSection">Test</span></div>
+                <div class="palette-scroll">
+                    <div class="palette-grid" id="sol-palette-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="image-lightbox">
+        <button class="close-btn">✕</button>
+        <img src="" alt="Zoomed">
+    </div>
+
+    <script src="idb.js"></script>
+  <script src="test.js"></script>
+</body>
+</html>

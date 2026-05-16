@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "SSC Bookmark",
+  "version": "1.1",
+  "description": "Saves questions from any mock exam site to a built-in dashboard, organised by subject.",
+  "icons": {
+    "128": "icon.png"
+  },
+  "permissions": [
+    "clipboardWrite",
+    "storage",
+    "tabs",
+    "alarms",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "*://*.oliveboard.in/*",
+    "*://*.ssccglpinnacle.com/*",
+    "*://*.testbook.com/*",
+    "https://ngartfwazifzivzpwmvl.supabase.co/*",
+    "http://localhost:5173/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.oliveboard.in/*",
+        "*://*.ssccglpinnacle.com/*",
+        "*://*.testbook.com/*",
+        "*://*.testranking.com/*",
+        "*://*.englishmadhyam.in/*"
+      ],
+      "js": [
+        "parser.js",
+        "content.js"
+      ]
+    },
+    {
+      "matches": ["http://localhost:5173/*"],
+      "js": ["sync.js"]
+    }
+  ],
+  "action": {
+    "default_title": "Open SSC Bookmark Dashboard",
+    "default_icon": "icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "dashboard.html",
+        "dashboard.js",
+        "supabase_config.js",
+        "lib/supabase.js",
+        "test.html",
+        "test.js",
+        "parser.js",
+        "lib/katex/*",
+        "lib/katex/fonts/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

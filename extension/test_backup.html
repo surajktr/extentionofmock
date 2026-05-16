@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Test</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Shape classes ── */
+        .shape-square  { border-radius: 4px; }
+        .shape-shield  { clip-path: polygon(0 0,100% 0,100% 75%,50% 100%,0 75%); border-radius: 2px 2px 0 0; }
+        .shape-circle  { border-radius: 50%; }
+
+        /* ── Status colours ── */
+        .bg-not-visited  { background-color:#EFEFEF; color:#000; border:1px solid #ccc; }
+        .bg-not-answered { background-color:#D33636; color:#fff; }
+        .bg-answered     { background-color:#1DA045; color:#fff; }
+        .bg-marked       { background-color:#7138A7; color:#fff; }
+
+        /* ── Custom radio ── */
+        .custom-radio input[type="radio"] { display:none; }
+        .custom-radio .radio-mark {
+            width:20px; height:20px; border:2px solid #6b7280; border-radius:50%;
+            display:inline-flex; align-items:center; justify-content:center;
+            margin-right:12px; transition:all .2s; flex-shrink:0;
+        }
+        .custom-radio input[type="radio"]:checked + .radio-mark { border-color:#fff; }
+        .custom-radio input[type="radio"]:checked + .radio-mark::after {
+            content:''; width:10px; height:10px; background:#fff; border-radius:50%;
+        }
+
+        /* ── Answer reveal: correct ── */
+        .opt-correct .radio-mark { border-color:#1DA045!important; background-color:#1DA045; }
+        .opt-correct .radio-mark::after { content:''; width:10px; height:10px; background:#fff; border-radius:50%; }
+        .opt-correct .opt-text { color:#4ade80!important; }
+
+        /* ── Answer reveal: wrong ── */
+        .opt-wrong .radio-mark { border-color:#D33636!important; background-color:#D33636; }
+        .opt-wrong .radio-mark::after { content:''; width:10px; height:10px; background:#fff; border-radius:50%; }
+        .opt-wrong .opt-text { color:#f87171!important; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:#0B2B38; }
+        ::-webkit-scrollbar-thumb { background:#4B5563; border-radius:10px; }
+        ::-webkit-scrollbar-thumb:hover { background:#6B7280; }
+
+        /* ── Body / layout ── */
+        body {
+            font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+            background:#141414; color:#fff; user-select:none;
+            height:100vh; display:flex; flex-direction:column; overflow:hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            background:#1A1A1A; border-bottom:1px solid #374151; height:56px;
+            display:flex; align-items:center; justify-content:space-between;
+            padding:0 24px; flex-shrink:0;
+        }
+        .header-left  { color:#D1D5DB; font-size:18px; letter-spacing:.025em; }
+        .header-right { display:flex; align-items:center; gap:24px; }
+        .timer-block  { display:flex; align-items:center; color:#D1D5DB; gap:4px; }
+        .timer-label  { font-weight:600; margin-right:8px; }
+        .timer-digit  { background:#2B2B2B; padding:4px 8px; border-radius:4px; font-family:monospace; color:#fff; }
+        .timer-sep    { color:#9CA3AF; }
+
+        /* ── Icon buttons ── */
+        .icon-btn {
+            background:none; border:none; cursor:pointer; padding:4px;
+            color:#9CA3AF; border-radius:4px; transition:color .2s;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .icon-btn:hover { color:#fff; }
+        .icon-btn svg { width:24px; height:24px; }
+        .icon-btn-cyan { border:1px solid #0891b2; color:#06b6d4; border-radius:4px; padding:6px; }
+        .icon-btn-cyan:hover { background:rgba(8,145,178,.15); }
+
+        /* ── Main workspace ── */
+        .workspace { display:flex; flex:1; overflow:hidden; position:relative; }
+
+        /* ── Left panel ── */
+        .left-panel { flex:1; display:flex; flex-direction:column; min-width:0; background:#141414; }
+
+        /* ── Sections bar ── */
+        .sections-bar {
+            display:flex; align-items:center; height:48px;
+            border-bottom:1px solid #374151; padding:0 24px; flex-shrink:0;
+        }
+        .sections-label { color:#6B7280; font-size:13px; letter-spacing:.1em; margin-right:16px; }
+        .sections-divider { width:1px; height:24px; background:#374151; margin-right:16px; }
+        .section-tab {
+            background:#0B4A5C; color:#fff; padding:6px 16px; border-radius:4px;
+            font-size:13px; border:none; cursor:default;
+        }
+        .mode-badge {
+            margin-left:16px; padding:2px 8px; font-size:11px; font-weight:700;
+            border-radius:4px; text-transform:uppercase; letter-spacing:.05em;
+        }
+        .mode-real     { background:#dc2626; color:#fff; }
+        .mode-practice { background:#16a34a; color:#fff; }
+
+        /* ── Question info bar ── */
+        .q-info-bar {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:16px 24px; border-bottom:1px solid #374151; flex-shrink:0;
+        }
+        .q-number { font-size:20px; font-weight:700; }
+        .q-meta   { display:flex; align-items:center; gap:24px; font-size:13px; }
+        .marks-block { display:flex; flex-direction:column; align-items:center; }
+        .marks-label { color:#9CA3AF; font-size:11px; margin-bottom:4px; }
+        .marks-pills { display:flex; gap:4px; }
+        .pill-green { background:#15803d; color:#fff; padding:2px 8px; border-radius:999px; font-size:11px; }
+        .pill-red   { background:#991b1b; color:#fff; padding:2px 8px; border-radius:999px; font-size:11px; }
+        .time-block { display:flex; flex-direction:column; align-items:center; }
+        .time-label { color:#9CA3AF; font-size:11px; margin-bottom:4px; }
+        .time-value { color:#D1D5DB; font-family:monospace; }
+
+        /* ── Question content ── */
+        .q-content { flex:1; overflow-y:auto; padding:24px; }
+        .q-text { font-size:17px; margin-bottom:24px; color:#F3F4F6; line-height:1.6; }
+        .options-list { display:flex; flex-direction:column; gap:12px; }
+
+        /* ── Option row ── */
+        .custom-radio {
+            display:flex; align-items:flex-start; cursor:pointer;
+            padding:8px; border-radius:6px; margin:0 -8px; transition:background .15s;
+        }
+        .custom-radio:hover { background:#1A1A1A; }
+        .opt-text { color:#D1D5DB; font-size:15px; padding-top:2px; line-height:1.5; transition:color .15s; }
+        .custom-radio:hover .opt-text { color:#fff; }
+
+        /* ── Solution / Notes panels ── */
+        .solution-panel {
+            display:none; margin-top:20px; padding:16px 20px;
+            background:#0e3545; border:1px solid #1e5a72; border-left:4px solid #08A8C6; border-radius:8px;
+            font-size:15px; color:#E2E8F0; line-height:1.7;
+        }
+        .solution-panel-title { color:#22d3ee; font-weight:700; font-size:13px; margin-bottom:10px; display:block; }
+        .notes-panel {
+            display:none; margin-top:12px; padding:16px 20px;
+            background:rgba(113,56,167,.12); border:1px solid rgba(113,56,167,.3); border-left:4px solid #7138A7; border-radius:8px;
+            font-size:15px; color:#E2E8F0; line-height:1.7;
+        }
+        .notes-panel-title { color:#a78bfa; font-weight:700; font-size:13px; margin-bottom:10px; display:block; }
+        .solution-panel img, .notes-panel img { max-width:100%; border-radius:6px; margin:8px 0; }
+
+        /* ── Left footer ── */
+        .left-footer {
+            height:64px; border-top:1px solid #374151; background:#141414;
+            padding:0 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+        }
+        .footer-left-btns { display:flex; gap:12px; }
+        .btn-gray {
+            background:#2D3339; color:#fff; padding:8px 16px; border-radius:4px;
+            font-size:13px; border:1px solid #4B5563; cursor:pointer; transition:background .15s;
+        }
+        .btn-gray:hover { background:#3d454d; }
+        .btn-cyan {
+            background:#08A8C6; color:#fff; padding:8px 24px; border-radius:4px;
+            font-size:13px; font-weight:600; border:none; cursor:pointer; transition:background .15s;
+        }
+        .btn-cyan:hover { background:#0792ad; }
+
+        /* ── Sidebar toggle ── */
+        #sidebarToggleWrapper {
+            position:absolute; right:340px; top:0; height:100%;
+            display:flex; align-items:center; z-index:10; transition:right .3s;
+        }
+        #toggleIconBtn {
+            background:#2D3339; border:1px solid #4B5563; border-right:none;
+            border-radius:6px 0 0 6px; width:24px; height:64px;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; color:#9CA3AF; transition:background .15s, color .15s;
+        }
+        #toggleIconBtn:hover { background:#3d454d; color:#fff; }
+        #toggleIcon { width:16px; height:16px; transform:rotate(180deg); transition:transform .3s; }
+        #toggleIcon.collapsed { transform:rotate(0deg); }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            width:340px; min-width:340px; background:#0B2B38;
+            display:flex; flex-direction:column; flex-shrink:0;
+            border-left:1px solid #374151; transition:width .3s, min-width .3s; overflow:hidden;
+        }
+
+        .sidebar-profile {
+            padding:16px; display:flex; align-items:center; gap:12px;
+            border-bottom:1px solid #143d4d; flex-shrink:0;
+        }
+        .avatar {
+            width:48px; height:48px; background:#4B5563; border-radius:50%;
+            overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+        .avatar svg { width:32px; height:32px; color:#D1D5DB; }
+
+        /* ── Legend ── */
+        .sidebar-legend {
+            padding:12px 16px; border-bottom:1px solid #143d4d; flex-shrink:0;
+        }
+        .legend-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 8px; }
+        .legend-item { display:flex; align-items:center; font-size:11px; color:#D1D5DB; }
+        .legend-chip {
+            width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+            font-size:10px; margin-right:8px; flex-shrink:0;
+        }
+        .legend-item-full { grid-column:1/-1; }
+        .legend-chip-relative { position:relative; width:24px; height:24px; margin-right:8px; flex-shrink:0; }
+        .legend-check-badge {
+            position:absolute; bottom:-4px; right:-4px; width:14px; height:14px;
+            background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center;
+            border:1px solid #0B2B38;
+        }
+        .legend-check-badge svg { width:8px; height:8px; }
+
+        /* ── Section title bar ── */
+        .sidebar-section-bar {
+            padding:8px 16px; background:#0E3545; border-bottom:1px solid #143d4d;
+            font-size:13px; color:#22d3ee; font-weight:600; flex-shrink:0;
+        }
+        .sidebar-section-bar span { color:#fff; font-weight:400; }
+
+        /* ── Palette ── */
+        .palette-scroll { flex:1; overflow-y:auto; padding:16px; background:#0B2B38; }
+        .palette-grid   { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+        .palette-btn {
+            width:44px; height:40px; display:flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:15px; border:none; cursor:pointer;
+            transition:transform .1s; position:relative;
+        }
+        .palette-btn:hover   { transform:scale(1.05); }
+        .palette-btn:active  { transform:scale(.95); }
+        .palette-check-badge {
+            position:absolute; bottom:-4px; right:-4px; width:14px; height:14px;
+            background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center;
+            border:1px solid #0B2B38; z-index:1;
+        }
+        .palette-check-badge svg { width:8px; height:8px; }
+
+        /* ── Sidebar footer ── */
+        .sidebar-footer { padding:16px; border-top:1px solid #143d4d; display:flex; flex-direction:column; gap:12px; flex-shrink:0; }
+        .btn-submit-test {
+            width:100%; background:#08A8C6; color:#fff; padding:10px;
+            border-radius:4px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:background .15s;
+        }
+        .btn-submit-test:hover { background:#0792ad; }
+        .btn-scorecard {
+            width:100%; background:#37414A; color:#E2E8F0; padding:8px;
+            border-radius:4px; font-size:13px; border:1px solid #4B5563; cursor:pointer; display:none; transition:background .15s;
+        }
+        .btn-scorecard:hover { background:#4a5560; }
+
+        /* ── Pause overlay ── */
+        #pauseOverlay {
+            position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999;
+            display:none; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+        }
+        #pauseOverlay h2 { font-size:32px; font-weight:700; color:#fff; }
+        #pauseOverlay p  { color:#9CA3AF; font-size:14px; }
+
+        /* ── Range picker modal ── */
+        #rangeModal {
+            position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:10000;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .range-card {
+            background:#1A1A1A; border:1px solid #374151; border-radius:12px;
+            padding:32px; width:360px; display:flex; flex-direction:column; gap:20px;
+        }
+        .range-card h2  { font-size:20px; font-weight:700; color:#fff; }
+        .range-card p   { font-size:13px; color:#9CA3AF; margin-top:-12px; }
+        .range-row      { display:flex; gap:12px; }
+        .range-field    { flex:1; display:flex; flex-direction:column; gap:6px; }
+        .range-field label { font-size:12px; color:#9CA3AF; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+        .range-field input {
+            background:#0B2B38; border:1px solid #1e5a72; color:#fff; border-radius:6px;
+            padding:10px 12px; font-size:15px; outline:none; width:100%; text-align:center;
+            font-family:'Segoe UI',sans-serif;
+        }
+        .range-field input:focus { border-color:#08A8C6; }
+        .btn-start-test {
+            background:#08A8C6; color:#fff; padding:12px; border-radius:6px;
+            font-size:15px; font-weight:700; border:none; cursor:pointer; transition:background .15s;
+        }
+        .btn-start-test:hover { background:#0792ad; }
+        .range-error { color:#f87171; font-size:12px; text-align:center; min-height:16px; }
+    </style>
+</head>
+<body>
+
+    <!-- Range Picker Modal (shown before test starts) -->
+    <div id="rangeModal">
+        <div class="range-card">
+            <h2>📋 Select Question Range</h2>
+            <p id="rangeDesc">Choose which questions to include in this test.</p>
+            <div class="range-row">
+                <div class="range-field">
+                    <label>From (Q. No.)</label>
+                    <input type="number" id="rangeFrom" min="1" value="1">
+                </div>
+                <div class="range-field">
+                    <label>To (Q. No.)</label>
+                    <input type="number" id="rangeTo" min="1" value="1">
+                </div>
+            </div>
+            <div class="range-error" id="rangeError"></div>
+            <button class="btn-start-test" id="btn-start-test">Start Test</button>
+        </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay">
+        <svg style="width:64px;height:64px;color:#08A8C6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h2>Test Paused</h2>
+        <p>Timer is paused. Resume to continue.</p>
+        <button class="btn-cyan" id="btn-resume-test" style="margin-top:8px">Resume Test</button>
+    </div>
+
+    <!-- Top Header -->
+    <header>
+        <div class="header-left" id="headerTitle">Live Test</div>
+        <div class="header-right">
+            <div class="timer-block">
+                <span class="timer-label">Time Left</span>
+                <div class="timer-digit" id="timer-hours">00</div>
+                <span class="timer-sep">:</span>
+                <div class="timer-digit" id="timer-minutes">00</div>
+                <span class="timer-sep">:</span>
+                <div class="timer-digit" id="timer-seconds">00</div>
+            </div>
+            <!-- Pause (SVG only) -->
+            <button class="icon-btn" id="btn-pause-header" title="Pause Test">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </button>
+            <!-- Full Screen (SVG only) -->
+            <button class="icon-btn icon-btn-cyan" id="btn-fullscreen-header" title="Switch Full Screen">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+
+        <!-- Left Panel -->
+        <div class="left-panel">
+
+            <!-- Sections Bar -->
+            <div class="sections-bar">
+                <span class="sections-label">SECTIONS</span>
+                <div class="sections-divider"></div>
+                <button class="section-tab" id="sectionName">Subject</button>
+                <span class="mode-badge" id="modeBadge">Mode</span>
+            </div>
+
+            <!-- Question Info Bar -->
+            <div class="q-info-bar">
+                <h2 class="q-number" id="questionNumberHeader">Question No. 1</h2>
+                <div class="q-meta">
+                    <div class="marks-block">
+                        <span class="marks-label">Marks</span>
+                        <div class="marks-pills">
+                            <span class="pill-green">+1</span>
+                            <span class="pill-red">-0.25</span>
+                        </div>
+                    </div>
+                    <div class="time-block">
+                        <span class="time-label">Time</span>
+                        <span class="time-value" id="questionTime">00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Content -->
+            <div class="q-content">
+                <div class="q-text" id="questionText">Loading question...</div>
+                <div class="options-list" id="optionsContainer"></div>
+                <div class="solution-panel" id="solutionPanel">
+                    <span class="solution-panel-title">📝 Solution</span>
+                    <div id="solutionContent"></div>
+                </div>
+                <div class="notes-panel" id="notesPanel">
+                    <span class="notes-panel-title">📌 Mistake Notes</span>
+                    <div id="notesContent"></div>
+                </div>
+            </div>
+
+            <!-- Left Footer -->
+            <div class="left-footer">
+                <div class="footer-left-btns">
+                    <button class="btn-gray" id="btn-mark-review">Mark for Review &amp; Next</button>
+                    <button class="btn-gray" id="btn-clear-response">Clear Response</button>
+                </div>
+                <button class="btn-cyan" id="btn-save-next">Save &amp; Next</button>
+            </div>
+        </div>
+
+        <!-- Sidebar Toggle -->
+        <div id="sidebarToggleWrapper">
+            <button id="toggleIconBtn">
+                <svg id="toggleIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div id="sidebar">
+
+            <!-- Profile -->
+            <div class="sidebar-profile">
+                <div class="avatar">
+                    <svg fill="currentColor" viewBox="0 0 24 24" style="color:#D1D5DB">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div style="color:#fff;font-weight:600">Candidate</div>
+            </div>
+
+            <!-- Legend -->
+            <div class="sidebar-legend">
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <div class="legend-chip bg-answered shape-shield" id="count-answered">0</div>
+                        <span>Answered</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-chip bg-marked shape-circle" id="count-marked">0</div>
+                        <span>Marked</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-chip bg-not-visited shape-square" id="count-not-visited">0</div>
+                        <span>Not Visited</span>
+                    </div>
+                    <div class="legend-item legend-item-full">
+                        <div class="legend-chip-relative">
+                            <div class="legend-chip bg-marked shape-circle" id="count-marked-answered">0</div>
+                            <div class="legend-check-badge">
+                                <svg fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                        </div>
+                        <span>Marked and answered</span>
+                    </div>
+                    <div class="legend-item legend-item-full" style="margin-top:4px">
+                        <div class="legend-chip bg-not-answered shape-shield" id="count-not-answered">0</div>
+                        <span>Not Answered</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section bar -->
+            <div class="sidebar-section-bar">
+                SECTION : <span id="sidebarSection">Subject</span>
+            </div>
+
+            <!-- Palette -->
+            <div class="palette-scroll">
+                <div class="palette-grid" id="paletteContainer"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="sidebar-footer">
+                <button class="btn-scorecard" id="btn-scorecard">📊 Score Card</button>
+                <button class="btn-submit-test" id="btn-submit">Submit Test</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="test.js"></script>
+</body>
+</html>
