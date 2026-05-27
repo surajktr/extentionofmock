@@ -1974,6 +1974,23 @@ var SavemockParser = (() => {
         margin-bottom: 0;
       }
       
+      /* Table styling */
+      table {
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 0.95em;
+        width: 100%;
+        max-width: 800px;
+      }
+      table, th, td {
+        border: 2px solid #000;
+      }
+      th, td {
+        padding: 12px 20px;
+        text-align: center;
+        min-width: 80px;
+      }
+      
       @media print {
         body { background: white; }
         .slide { page-break-after: always; }
