@@ -1817,9 +1817,9 @@ var SavemockParser = (() => {
       if (q.options && q.options.length > 0) {
         optsHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 50px; font-size: 32px; font-weight: bold; width: 100%;">
           ${q.options.map((opt, i) => `
-            <div style="display: flex; align-items: flex-start; gap: 15px;">
+            <div class="option-row" style="display: flex; align-items: flex-start; gap: 15px;">
               <span style="font-weight: bold; min-width: 50px;">${labels[i] || ''}</span>
-              <div style="flex: 1;">${cleanTestbookSpecifics(opt.html || '')}</div>
+              <div class="option-content" style="flex: 1;">${cleanTestbookSpecifics(opt.html || '')}</div>
             </div>
           `).join('')}
         </div>`;
@@ -1831,9 +1831,9 @@ var SavemockParser = (() => {
         <div class="slide">
           <div class="left-pane"></div>
           <div class="right-pane">
-            <div style="display: flex; gap: 20px; font-size: 36px; font-weight: bold; margin-bottom: 20px;">
+            <div class="question-row" style="display: flex; gap: 20px; font-size: 36px; font-weight: bold; margin-bottom: 20px; align-items: flex-start;">
               <span>${idx + 1}.</span>
-              <div style="flex: 1; line-height: 1.5;">${cleanTestbookSpecifics(questionHtml)}</div>
+              <div class="question-content" style="flex: 1; line-height: 1.5;">${cleanTestbookSpecifics(questionHtml)}</div>
             </div>
             ${optsHtml}
           </div>
@@ -1959,8 +1959,20 @@ var SavemockParser = (() => {
         max-width: 100%;
         height: auto;
         object-fit: contain;
+        zoom: 1.35;
+        margin-top: 10px;
+        margin-bottom: 10px;
       }
       .katex { font-size: 1.1em; }
+      
+      /* Fix alignment for numbers and content */
+      .question-content p, .option-content p {
+        margin-top: 0;
+        margin-bottom: 0.4em;
+      }
+      .question-content p:last-child, .option-content p:last-child {
+        margin-bottom: 0;
+      }
       
       @media print {
         body { background: white; }
