@@ -24,6 +24,7 @@ var SavemockParser = (() => {
     cleanMathJaxHtml: () => cleanMathJaxHtml,
     generateAllSectionsHtml: () => generateAllSectionsHtml,
     generateDownloadHtml: () => generateDownloadHtml,
+    generatePptHtml: () => generatePptHtml,
     parseQuestionsFromHtml: () => parseQuestionsFromHtml
   });
   var SUBJECTS = ["Math", "English", "GK/GS", "Reasoning"];
@@ -1803,6 +1804,171 @@ var SavemockParser = (() => {
         ${sectionsHtml}
     </div>
 
+</body>
+</html>`;
+  function generatePptHtml(questions, sectionTitle) {
+    const title = sectionTitle || "Questions";
+    
+    let slidesHtml = '';
+    questions.forEach((q, idx) => {
+      let optsHtml = '';
+      const labels = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)'];
+      if (q.options && q.options.length > 0) {
+        optsHtml = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 50px; font-size: 32px; font-weight: bold; width: 100%;">
+          ${q.options.map((opt, i) => `
+            <div style="display: flex; align-items: flex-start; gap: 15px;">
+              <span style="font-weight: bold; min-width: 50px;">${labels[i] || ''}</span>
+              <div style="flex: 1;">${cleanTestbookSpecifics(opt.html || '')}</div>
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      
+      let questionHtml = q.questionHtml || '';
+      
+      slidesHtml += `
+        <div class="slide">
+          <div class="left-pane"></div>
+          <div class="right-pane">
+            <div style="display: flex; gap: 20px; font-size: 36px; font-weight: bold; margin-bottom: 20px;">
+              <span>${idx + 1}.</span>
+              <div style="flex: 1; line-height: 1.5;">${cleanTestbookSpecifics(questionHtml)}</div>
+            </div>
+            ${optsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, initial-scale=1.0">
+    <title>${title} - PPT</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script>
+      function sanitizeTex(tex) {
+        if (!tex) return tex;
+        tex = tex.replace(/\\\\u00A0/g, '');
+        tex = tex.replace(/_\\\\{\\\\s*\\\\}/g, '');
+        tex = tex.replace(/\\\\^\\\\{\\\\s*\\\\}/g, '');
+        let prev;
+        do {
+          prev = tex;
+          tex = tex.replace(/(_\\\\{[^}]*\\\\})_\\\\{[^}]*\\\\}/g, '$1');
+          tex = tex.replace(/(\\\\^\\\\{[^}]*\\\\})\\\\^\\\\{[^}]*\\\\}/g, '$1');
+        } while (tex !== prev);
+        return tex.trim();
+      }
+      function normalizeLatex(tex) {
+        if (!tex) return tex;
+        return tex
+          .replace(/\\\\u00d7/g, '\\\\\\\\times ')
+          .replace(/\\\\u00f7/g, '\\\\\\\\div ')
+          .replace(/\\\\u2212/g, '-')
+          .replace(/\\\\u2264/g, '\\\\\\\\leq ')
+          .replace(/\\\\u2265/g, '\\\\\\\\geq ')
+          .replace(/\\\\u2260/g, '\\\\\\\\neq ')
+          .replace(/\\\\u2248/g, '\\\\\\\\approx ')
+          .replace(/\\\\u221e/g, '\\\\\\\\infty ')
+          .replace(/\\\\u03c0/g, '\\\\\\\\pi ')
+          .replace(/\\\\u221a/g, '\\\\\\\\sqrt')
+          .replace(/\\\\\\\\frac/g, '\\\\\\\\dfrac');
+      }
+      function wrapBareLatex(element) {
+        var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+        var node, nodesToProcess = [];
+        while (node = walker.nextNode()) {
+          var parent = node.parentNode;
+          if (parent && (parent.closest('.math-tex') || parent.closest('.katex') || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE')) continue;
+          if (node.textContent.indexOf('\\\\\\\\frac{') !== -1 || node.textContent.indexOf('\\\\\\\\dfrac{') !== -1 || node.textContent.indexOf('\\\\\\\\sqrt{') !== -1 || node.textContent.indexOf('\\\\\\\\overline{') !== -1) {
+            nodesToProcess.push(node);
+          }
+        }
+        nodesToProcess.forEach(function(textNode) {
+          var text = textNode.textContent;
+          var pattern = /(\\\\\\\\d?frac\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\}\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\}|\\\\\\\\sqrt\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\}|\\\\\\\\overline\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/g;
+          var parts = text.split(pattern);
+          var matches = text.match(pattern);
+          if (!matches || matches.length === 0) return;
+          var result = '', mi = 0;
+          for (var pi = 0; pi < parts.length; pi++) {
+            result += parts[pi];
+            if (mi < matches.length) { result += '\\\\\\\\(' + matches[mi] + '\\\\\\\\)'; mi++; }
+          }
+          textNode.textContent = result;
+        });
+      }
+      function renderMath() {
+        if (!window.katex || typeof renderMathInElement === 'undefined') { setTimeout(renderMath, 200); return; }
+        document.querySelectorAll('.math-tex').forEach(function(span) {
+            if (span.querySelector('.katex')) return;
+            var tex = span.textContent.trim();
+            if (!tex) return;
+            if (tex.startsWith('$$') && tex.endsWith('$$')) tex = tex.slice(2, -2);
+            else if (tex.startsWith('$') && tex.endsWith('$')) tex = tex.slice(1, -1);
+            else if (tex.length > 4 && tex.charAt(0) === '\\\\\\\\' && tex.charAt(1) === '(' && tex.endsWith('\\\\\\\\)')) tex = tex.slice(2, -2);
+            tex = sanitizeTex(tex);
+            tex = normalizeLatex(tex);
+            if (!tex) return;
+            try { katex.render(tex, span, {throwOnError: false, displayMode: false}); } catch(e) {}
+        });
+        wrapBareLatex(document.body);
+        renderMathInElement(document.body, { throwOnError: false, delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\\\\\\\[', right: '\\\\\\\\]', display: true}, {left: '$', right: '$', display: false}, {left: '\\\\\\\\(', right: '\\\\\\\\)', display: false}] });
+      }
+      window.onload = renderMath;
+    </script>
+    <style>
+      @page {
+        size: 1920px 1080px;
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f0f0f0;
+        font-family: Arial, sans-serif;
+      }
+      .slide {
+        width: 1920px;
+        height: 1080px;
+        background: white;
+        display: flex;
+        box-sizing: border-box;
+        page-break-after: always;
+        overflow: hidden;
+      }
+      .left-pane {
+        width: 50%;
+        height: 100%;
+        box-sizing: border-box;
+      }
+      .right-pane {
+        width: 50%;
+        height: 100%;
+        padding: 60px 80px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+      }
+      .katex { font-size: 1.1em; }
+      
+      @media print {
+        body { background: white; }
+        .slide { page-break-after: always; }
+      }
+    </style>
+</head>
+<body>
+    ${slidesHtml}
 </body>
 </html>`;
   }
