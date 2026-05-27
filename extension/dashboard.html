@@ -855,7 +855,13 @@
         <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
           <input type="checkbox" id="chk-include-solutions" checked> Solutions
         </label>
+        <span style="color: #475569;">|</span>
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          MCQ Count:
+          <input type="number" id="export-mcq-count" min="1" max="100" value="20" style="width: 50px; padding: 3px 6px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: white; text-align: center; font-weight: bold; outline: none;">
+        </label>
       </div>
+      <button id="btn-export-mcq" class="btn btn-blue btn-sm" style="background: #8b5cf6;" title="Export MCQ JSON for Whiteboard (No solutions, supports images)">📥 Export MCQ JSON</button>
       <button id="btn-export" class="btn btn-blue btn-sm">📥 Export HTML</button>
       <button id="btn-backup" class="btn btn-slate btn-sm">💾 Backup JSON</button>
       <button id="btn-toggle-dark" class="btn btn-outline btn-sm" title="Toggle Dark Mode">🌙</button>

@@ -64,6 +64,9 @@ function init() {
   const exportBtn = document.getElementById('btn-export');
   if (exportBtn) exportBtn.addEventListener('click', exportHtml);
 
+  const exportMcqBtn = document.getElementById('btn-export-mcq');
+  if (exportMcqBtn) exportMcqBtn.addEventListener('click', exportMcqJson);
+
   const backupBtn = document.getElementById('btn-backup');
   if (backupBtn) backupBtn.addEventListener('click', backupJson);
 
@@ -1254,6 +1257,76 @@ function exportHtml() {
   const html = SavemockParser.generateDownloadHtml(exportQs, currentSubject, { includeSolutions: includeSols });
   downloadFile(html, `savemock-${currentSubject.toLowerCase()}-export.html`, 'text/html');
   toast(`✅ ${exportQs.length} questions exported!`);
+}
+
+function extractQuestionData(q) {
+  const temp = document.createElement("div");
+  temp.innerHTML = q.questionHtml || "";
+  
+  // Extract first image src
+  const imgEl = temp.querySelector("img");
+  const image = imgEl ? imgEl.src : null;
+  
+  // Remove all images so they don't clutter question text
+  temp.querySelectorAll("img").forEach(img => img.remove());
+  
+  // Convert <sup> and <sub> elements to standard LaTeX exponents and indices so squares and cubes are fully preserved
+  temp.querySelectorAll("sup").forEach(sup => {
+    sup.textContent = `^{${sup.textContent}}`;
+  });
+  temp.querySelectorAll("sub").forEach(sub => {
+    sub.textContent = `_{${sub.textContent}}`;
+  });
+  
+  // Strip leading question numbers (e.g. Q1., Q2., 1., 2.)
+  let cleanedHtml = stripLeadingNumber(temp.innerHTML);
+  const tempCleaned = document.createElement("div");
+  tempCleaned.innerHTML = cleanedHtml;
+  
+  let questionText = tempCleaned.textContent || "";
+  questionText = questionText.replace(/\s+/g, ' ').trim();
+  
+  // Process options: convert each to plain text, strip leading number, strip options' images if any
+  const optionsText = (q.options || []).map(opt => {
+    let optHtml = stripLeadingNumber(opt.html || "");
+    const optTemp = document.createElement("div");
+    optTemp.innerHTML = optHtml;
+    optTemp.querySelectorAll("img").forEach(img => img.remove());
+    
+    // Convert <sup> and <sub> inside options to preserve math equations correctly
+    optTemp.querySelectorAll("sup").forEach(sup => {
+      sup.textContent = `^{${sup.textContent}}`;
+    });
+    optTemp.querySelectorAll("sub").forEach(sub => {
+      sub.textContent = `_{${sub.textContent}}`;
+    });
+    
+    let optText = optTemp.textContent || "";
+    return optText.replace(/\s+/g, ' ').trim();
+  });
+  
+  return {
+    question: questionText,
+    options: optionsText,
+    image: image
+  };
+}
+
+function exportMcqJson() {
+  const qs = db[currentSubject] || [];
+  if (qs.length === 0) { toast(`No questions to export for ${currentSubject}`); return; }
+  
+  const countInput = document.getElementById('export-mcq-count');
+  let count = countInput ? parseInt(countInput.value) : 20;
+  if (isNaN(count) || count < 1) count = 20;
+  if (count > 100) count = 100;
+  
+  // Grab up to 'count' items from the subject
+  const exportQs = qs.slice(0, count).map(q => extractQuestionData(q));
+  
+  const jsonStr = JSON.stringify(exportQs, null, 2);
+  downloadFile(jsonStr, `savemock-${currentSubject.toLowerCase()}-mcq.json`, 'application/json');
+  toast(`✅ ${exportQs.length} MCQ questions exported for Whiteboard!`);
 }
 
 function backupJson() {

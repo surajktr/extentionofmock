@@ -132,7 +132,7 @@ if (historyId) {
         renderSolutionPalette();
     });
 } else {
-    getFullDb().then((db) => {
+    getFullDb([subject]).then((db) => {
         const rawQs = db[subject] || [];
 
         if (rawQs.length === 0) {
