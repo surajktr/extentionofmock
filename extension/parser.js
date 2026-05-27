@@ -1853,31 +1853,31 @@ var SavemockParser = (() => {
     <script>
       function sanitizeTex(tex) {
         if (!tex) return tex;
-        tex = tex.replace(/\\\\u00A0/g, '');
-        tex = tex.replace(/_\\\\{\\\\s*\\\\}/g, '');
-        tex = tex.replace(/\\\\^\\\\{\\\\s*\\\\}/g, '');
+        tex = tex.replace(/\\u00A0/g, '');
+        tex = tex.replace(/_\\{\\s*\\}/g, '');
+        tex = tex.replace(/\\^\\{\\s*\\}/g, '');
         let prev;
         do {
           prev = tex;
-          tex = tex.replace(/(_\\\\{[^}]*\\\\})_\\\\{[^}]*\\\\}/g, '$1');
-          tex = tex.replace(/(\\\\^\\\\{[^}]*\\\\})\\\\^\\\\{[^}]*\\\\}/g, '$1');
+          tex = tex.replace(/(_\\{[^}]*\\})_\\{[^}]*\\}/g, '$1');
+          tex = tex.replace(/(\\^\\{[^}]*\\})\\^\\{[^}]*\\}/g, '$1');
         } while (tex !== prev);
         return tex.trim();
       }
       function normalizeLatex(tex) {
         if (!tex) return tex;
         return tex
-          .replace(/\\\\u00d7/g, '\\\\\\\\times ')
-          .replace(/\\\\u00f7/g, '\\\\\\\\div ')
-          .replace(/\\\\u2212/g, '-')
-          .replace(/\\\\u2264/g, '\\\\\\\\leq ')
-          .replace(/\\\\u2265/g, '\\\\\\\\geq ')
-          .replace(/\\\\u2260/g, '\\\\\\\\neq ')
-          .replace(/\\\\u2248/g, '\\\\\\\\approx ')
-          .replace(/\\\\u221e/g, '\\\\\\\\infty ')
-          .replace(/\\\\u03c0/g, '\\\\\\\\pi ')
-          .replace(/\\\\u221a/g, '\\\\\\\\sqrt')
-          .replace(/\\\\\\\\frac/g, '\\\\\\\\dfrac');
+          .replace(/\u00d7/g, '\\\\times ')
+          .replace(/\u00f7/g, '\\\\div ')
+          .replace(/\u2212/g, '-')
+          .replace(/\u2264/g, '\\\\leq ')
+          .replace(/\u2265/g, '\\\\geq ')
+          .replace(/\u2260/g, '\\\\neq ')
+          .replace(/\u2248/g, '\\\\approx ')
+          .replace(/\u221e/g, '\\\\infty ')
+          .replace(/\u03c0/g, '\\\\pi ')
+          .replace(/\u221a/g, '\\\\sqrt')
+          .replace(/\\\\frac/g, '\\\\dfrac');
       }
       function wrapBareLatex(element) {
         var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
@@ -1885,20 +1885,20 @@ var SavemockParser = (() => {
         while (node = walker.nextNode()) {
           var parent = node.parentNode;
           if (parent && (parent.closest('.math-tex') || parent.closest('.katex') || parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE')) continue;
-          if (node.textContent.indexOf('\\\\\\\\frac{') !== -1 || node.textContent.indexOf('\\\\\\\\dfrac{') !== -1 || node.textContent.indexOf('\\\\\\\\sqrt{') !== -1 || node.textContent.indexOf('\\\\\\\\overline{') !== -1) {
+          if (node.textContent.indexOf('\\\\frac{') !== -1 || node.textContent.indexOf('\\\\dfrac{') !== -1 || node.textContent.indexOf('\\\\sqrt{') !== -1 || node.textContent.indexOf('\\\\overline{') !== -1) {
             nodesToProcess.push(node);
           }
         }
         nodesToProcess.forEach(function(textNode) {
           var text = textNode.textContent;
-          var pattern = /(\\\\\\\\d?frac\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\}\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\}|\\\\\\\\sqrt\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\}|\\\\\\\\overline\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/g;
+          var pattern = /(\\\\d?frac\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}|\\\\sqrt\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}|\\\\overline\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\})/g;
           var parts = text.split(pattern);
           var matches = text.match(pattern);
           if (!matches || matches.length === 0) return;
           var result = '', mi = 0;
           for (var pi = 0; pi < parts.length; pi++) {
             result += parts[pi];
-            if (mi < matches.length) { result += '\\\\\\\\(' + matches[mi] + '\\\\\\\\)'; mi++; }
+            if (mi < matches.length) { result += '\\\\(' + matches[mi] + '\\\\)'; mi++; }
           }
           textNode.textContent = result;
         });
@@ -1911,14 +1911,14 @@ var SavemockParser = (() => {
             if (!tex) return;
             if (tex.startsWith('$$') && tex.endsWith('$$')) tex = tex.slice(2, -2);
             else if (tex.startsWith('$') && tex.endsWith('$')) tex = tex.slice(1, -1);
-            else if (tex.length > 4 && tex.charAt(0) === '\\\\\\\\' && tex.charAt(1) === '(' && tex.endsWith('\\\\\\\\)')) tex = tex.slice(2, -2);
+            else if (tex.length > 4 && tex.charAt(0) === '\\\\' && tex.charAt(1) === '(' && tex.endsWith('\\\\)')) tex = tex.slice(2, -2);
             tex = sanitizeTex(tex);
             tex = normalizeLatex(tex);
             if (!tex) return;
             try { katex.render(tex, span, {throwOnError: false, displayMode: false}); } catch(e) {}
         });
         wrapBareLatex(document.body);
-        renderMathInElement(document.body, { throwOnError: false, delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\\\\\\\[', right: '\\\\\\\\]', display: true}, {left: '$', right: '$', display: false}, {left: '\\\\\\\\(', right: '\\\\\\\\)', display: false}] });
+        renderMathInElement(document.body, { throwOnError: false, delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\\\[', right: '\\\\]', display: true}, {left: '$', right: '$', display: false}, {left: '\\\\(', right: '\\\\)', display: false}] });
       }
       window.onload = renderMath;
     </script>
